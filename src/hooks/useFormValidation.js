@@ -1,60 +1,50 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 /**
- * Custom Hook para manejo y validación de formularios
- *
- * @description
- * Hook personalizado que proporciona funcionalidad completa para manejar formularios
- * incluyendo validación en tiempo real, manejo de estado, y control de envío.
- *
+ * Hook personalizado para manejar validación de formularios en React
+ * 
  * @param {Object} initialValues - Valores iniciales del formulario
  * @param {Object} validationRules - Objeto con las reglas de validación para cada campo
- *                                   Formato: { nombreCampo: [función1, función2, ...] }
- *
- * @returns {Object} Objeto con todas las funciones y estados del formulario
- *
+ *                                   Formato: { fieldName: [rule1, rule2, ...] }
+ *                                   Cada regla es una función que recibe el valor y retorna un string de error o ""
+ * 
+ * @returns {Object} Objeto con propiedades y métodos para manejar el formulario
+ * 
  * @example
- * // Definir reglas de validación
  * const validationRules = {
  *   email: [
- *     (value) => !value ? "El email es requerido" : "",
+ *     (value) => !value ? "Email es requerido" : "",
  *     (value) => !/\S+@\S+\.\S+/.test(value) ? "Email inválido" : ""
  *   ],
  *   password: [
- *     (value) => !value ? "La contraseña es requerida" : "",
+ *     (value) => !value ? "Password es requerido" : "",
  *     (value) => value.length < 6 ? "Mínimo 6 caracteres" : ""
  *   ]
  * };
- *
- * // Usar el hook
+ * 
+ * const initialValues = { email: "", password: "" };
+ * 
  * const {
  *   values,
  *   errors,
  *   handleChange,
  *   handleSubmit,
- *   getFieldState
- * } = useFormValidation({ email: "", password: "" }, validationRules);
- *
- * // En el JSX
- * <input
- *   value={values.email}
- *   onChange={handleChange("email")}
- *   className={getFieldState("email") === "error" ? "input-error" : ""}
- * />
+ *   isValid
+ * } = useFormValidation(initialValues, validationRules);
  */
 export const useFormValidation = (initialValues, validationRules) => {
   // Estados del formulario
-  const [values, setValues] = useState(initialValues);
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [values, setValues] = useState(initialValues);           // Valores actuales de los campos
+  const [errors, setErrors] = useState({});                      // Errores de validación por campo
+  const [touched, setTouched] = useState({});                    // Campos que han sido tocados/interactuados
+  const [isSubmitting, setIsSubmitting] = useState(false);       // Estado de envío del formulario
+  const [isDirty, setIsDirty] = useState(false);                 // Indica si el formulario ha sido modificado
 
   /**
-   * Valida un campo específico usando sus reglas definidas
-   *
+   * Valida un campo específico usando sus reglas de validación
    * @param {string} name - Nombre del campo a validar
-   * @param {any} value - Valor actual del campo
-   * @returns {string} Mensaje de error o cadena vacía si es válido
+   * @param {any} value - Valor del campo a validar
+   * @returns {string} Mensaje de error o string vacío si es válido
    */
   const validateField = useCallback(
     (name, value) => {
@@ -72,24 +62,39 @@ export const useFormValidation = (initialValues, validationRules) => {
   );
 
   /**
-   * Maneja los cambios en los campos del formulario
-   * Actualiza el valor, marca como tocado y valida inmediatamente
-   *
+   * Maneja el cambio de valor en un campo del formulario
+   * Soporta eventos de input, checkboxes, files y valores directos
    * @param {string} name - Nombre del campo
-   * @returns {Function} Función manejadora del evento onChange
-   *
-   * @example
-   * <input onChange={handleChange("email")} />
+   * @returns {Function} Función que maneja el cambio (puede recibir event o valor directo)
    */
   const handleChange = useCallback(
-    (name) => (e) => {
-      const value = e.target.value;
+    (name) => (eventOrValue) => {
+      let value;
 
-      // Actualizar valor
+      // Determina si es un evento o un valor directo
+      if (
+        eventOrValue &&
+        typeof eventOrValue === "object" &&
+        "target" in eventOrValue
+      ) {
+        const { target } = eventOrValue;
+        // Maneja diferentes tipos de inputs
+        value =
+          target.type === "checkbox"
+            ? target.checked
+            : target.type === "file"
+            ? target.files
+            : target.value;
+      } else {
+        value = eventOrValue;
+      }
+
+      // Actualiza el valor, marca como touched y dirty
       setValues((prev) => ({ ...prev, [name]: value }));
-
-      // Marcar como tocado y validar inmediatamente
       setTouched((prev) => ({ ...prev, [name]: true }));
+      setIsDirty(true);
+
+      // Valida el campo inmediatamente
       const error = validateField(name, value);
       setErrors((prev) => ({ ...prev, [name]: error }));
     },
@@ -97,14 +102,9 @@ export const useFormValidation = (initialValues, validationRules) => {
   );
 
   /**
-   * Maneja cuando un campo pierde el foco (blur)
-   * Marca el campo como tocado y ejecuta validación
-   *
+   * Maneja el evento blur (cuando el campo pierde el foco)
    * @param {string} name - Nombre del campo
-   * @returns {Function} Función manejadora del evento onBlur
-   *
-   * @example
-   * <input onBlur={handleBlur("email")} />
+   * @returns {Function} Función que maneja el evento blur
    */
   const handleBlur = useCallback(
     (name) => () => {
@@ -116,35 +116,27 @@ export const useFormValidation = (initialValues, validationRules) => {
   );
 
   /**
-   * Obtiene el estado visual del campo para aplicar estilos
-   *
+   * Obtiene el estado visual de un campo para estilos CSS
    * @param {string} name - Nombre del campo
-   * @returns {string} "neutral" | "error" | "success"
-   *
-   * @example
-   * const fieldState = getFieldState("email");
-   * const inputClass = fieldState === "error" ? "input-error" :
-   *                   fieldState === "success" ? "input-success" : "input-neutral";
+   * @returns {string} Estado del campo: "", "error", o "success"
    */
   const getFieldState = useCallback(
     (name) => {
-      if (!touched[name]) return "neutral";
-      return errors[name] ? "error" : "success";
+      if (!touched[name]) return "";
+      return errors[name] ? "error" : values[name] ? "success" : "";
     },
-    [touched, errors]
+    [touched, errors, values]
   );
 
   /**
    * Valida todos los campos del formulario
-   * Marca todos los campos como tocados y ejecuta todas las validaciones
-   *
-   * @returns {boolean} true si el formulario es válido, false en caso contrario
+   * @returns {boolean} true si todos los campos son válidos, false en caso contrario
    */
   const validateAll = useCallback(() => {
     const newErrors = {};
     const newTouched = {};
 
-    // Validar cada campo definido en las reglas
+    // Valida cada campo que tiene reglas definidas
     Object.keys(validationRules).forEach((name) => {
       newTouched[name] = true;
       const error = validateField(name, values[name]);
@@ -153,40 +145,40 @@ export const useFormValidation = (initialValues, validationRules) => {
 
     setTouched(newTouched);
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   }, [validationRules, validateField, values]);
 
   /**
-   * Maneja el envío del formulario con validación completa
-   *
+   * Maneja el envío del formulario con validación
    * @param {Function} onSubmit - Función callback que se ejecuta si el formulario es válido
-   *                              Recibe los valores del formulario como parámetro
-   * @returns {Function} Función manejadora del evento onSubmit
-   *
-   * @example
-   * const handleFormSubmit = async (formValues) => {
-   *   // Lógica de envío
-   *   await api.submitForm(formValues);
-   * };
-   *
-   * <form onSubmit={handleSubmit(handleFormSubmit)}>
+   * @returns {Function} Función que maneja el evento submit
    */
   const handleSubmit = useCallback(
     (onSubmit) => async (e) => {
-      if (e) {
-        e.preventDefault();
-      }
+      if (e) e.preventDefault();
       setIsSubmitting(true);
 
-      if (validateAll()) {
+      const isFormValid = validateAll();
+
+      if (isFormValid) {
         try {
           await onSubmit(values);
         } catch (error) {
           console.error("Error en el envío:", error);
         }
+      } else {
+        // Scroll al primer campo con error y enfocarlo
+        setTimeout(() => {
+          const firstErrorField = document.querySelector(".border-red-500");
+          if (firstErrorField) {
+            firstErrorField.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+            firstErrorField.focus();
+          }
+        }, 100);
       }
-
       setIsSubmitting(false);
     },
     [validateAll, values]
@@ -194,45 +186,61 @@ export const useFormValidation = (initialValues, validationRules) => {
 
   /**
    * Resetea el formulario a su estado inicial
-   * Limpia valores, errores, estado de tocado y estado de envío
-   *
-   * @example
-   * <button type="button" onClick={reset}>Limpiar formulario</button>
    */
   const reset = useCallback(() => {
     setValues(initialValues);
     setErrors({});
     setTouched({});
     setIsSubmitting(false);
+    setIsDirty(false);
   }, [initialValues]);
 
-  // Retorna todas las funciones y estados necesarios
+  /**
+   * Establece el valor de un campo específico programáticamente
+   * @param {string} name - Nombre del campo
+   * @param {any} value - Nuevo valor del campo
+   */
+  const setFieldValue = useCallback((name, value) => {
+    setValues((prev) => ({ ...prev, [name]: value }));
+    setIsDirty(true);
+  }, []);
+
+  /**
+   * Establece un error para un campo específico programáticamente
+   * @param {string} name - Nombre del campo
+   * @param {string} error - Mensaje de error
+   */
+  const setFieldError = useCallback((name, error) => {
+    setErrors((prev) => ({ ...prev, [name]: error }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  }, []);
+
+  // Calcula si el formulario es válido (no tiene errores y al menos un campo ha sido tocado)
+  const isValid =
+    Object.keys(errors).every((key) => !errors[key]) &&
+    Object.keys(touched).length > 0;
+
+  // Retorna todas las propiedades y métodos disponibles
   return {
-    /** @type {Object} Valores actuales del formulario */
-    values,
+    // Estados
+    values,           // Valores actuales de todos los campos
+    errors,           // Errores de validación por campo
+    touched,          // Campos que han sido interactuados
+    isSubmitting,     // Estado de envío del formulario
+    isDirty,          // Indica si el formulario ha sido modificado
+    isValid,          // Indica si el formulario es completamente válido
 
-    /** @type {Object} Errores de validación por campo */
-    errors,
+    // Manejadores de eventos
+    handleChange,     // Función para manejar cambios en campos
+    handleBlur,       // Función para manejar eventos blur
+    handleSubmit,     // Función para manejar envío del formulario
 
-    /** @type {Object} Campos que han sido interactuados por el usuario */
-    touched,
-
-    /** @type {boolean} Indica si el formulario se está enviando */
-    isSubmitting,
-
-    /** @type {Function} Manejador de cambios en los campos */
-    handleChange,
-
-    /** @type {Function} Manejador de pérdida de foco en los campos */
-    handleBlur,
-
-    /** @type {Function} Manejador de envío del formulario */
-    handleSubmit,
-
-    /** @type {Function} Obtiene el estado visual del campo */
-    getFieldState,
-
-    /** @type {Function} Resetea el formulario */
-    reset,
+    // Utilidades
+    getFieldState,    // Obtiene el estado visual de un campo
+    reset,            // Resetea el formulario
+    setFieldValue,    // Establece valor de campo programáticamente
+    setFieldError,    // Establece error de campo programáticamente
+    validateField,    // Valida un campo específico
+    validateAll,      // Valida todos los campos
   };
 };
