@@ -1,0 +1,53 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@/*": [
+                "./src/*"
+            ],
+            "@formatters": [
+                "./src/utils/formatters.js"
+            ],
+            "@validators": [
+                "./src/utils/validators.js"
+            ],
+            "@constants": [
+                "./src/utils/constants.js"
+            ],
+            "@helpers": [
+                "./src/utils/helpers.js"
+            ],
+            "@utils/*": [
+                "./src/utils/*"
+            ],
+            "@components/*": [
+                "./src/components/*"
+            ],
+            "@pages/*": [
+                "./src/pages/*"
+            ],
+            "@hooks/*": [
+                "./src/hooks/*"
+            ],
+            "@services/*": [
+                "./src/services/*"
+            ],
+            "@context/*": [
+                "./src/context/*"
+            ],
+            "@assets/*": [
+                "./src/assets/*"
+            ],
+            "@styles/*": [
+                "./src/styles/*"
+            ]
+        }
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
