@@ -19,7 +19,7 @@ export function PokemonCard({ pokemon, delay = 0, hoveredId, setHoveredId }) {
   const shouldFlip = loading || (!isHovered && hoveredId !== null);
 
   const scaleClass = isHovered
-    ? "scale-105 z-20"
+    ? "scale-105 z-10"
     : hoveredId !== null
     ? "scale-95 opacity-90"
     : "scale-100";
