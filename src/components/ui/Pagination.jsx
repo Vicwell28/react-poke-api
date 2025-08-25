@@ -68,6 +68,10 @@ export const Pagination = ({
         page !== currentPage &&
         !disabled
       ) {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
         onPageChange?.(page);
       }
     },
@@ -116,7 +120,7 @@ export const Pagination = ({
       {/* Información de elementos */}
       {showItemsInfo && totalItems > 0 && (
         <div
-          className={`${currentSizeClasses.text} text-gray-600 order-2 sm:order-1`}
+          className={`${currentSizeClasses.text} text-white order-2 sm:order-1`}
         >
           Mostrando <span className="font-medium">{startItem}</span> a{" "}
           <span className="font-medium">{endItem}</span> de{" "}
@@ -218,7 +222,7 @@ export const Pagination = ({
 
       {/* Información de página */}
       {showPageInfo && (
-        <div className={`${currentSizeClasses.text} text-gray-600 order-3`}>
+        <div className={`${currentSizeClasses.text} text-white order-3`}>
           Página <span className="font-medium">{currentPage}</span> de{" "}
           <span className="font-medium">{totalPages}</span>
         </div>

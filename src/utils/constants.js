@@ -661,5 +661,3 @@ export const API_CONFIG = {
     LONG: 24 * 60 * 60 * 1000 // 24 horas
   }
 };
-
-//
